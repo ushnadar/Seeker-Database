@@ -1,39 +1,51 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 function Signup() {
-  const navigate = useNavigate();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("");
+  const [data, setData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    phone: ""
+  });
 
-  const handleSignup = () => {
-    if (name && email && password) {
-      alert("Signup successful (demo)");
-      navigate("/");
-    } else {
-      alert("Enter all details");
+  const handleChange = (e) => {
+    setData({ ...data, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async () => {
+    if (!data.name || !data.email || !data.password) {
+      alert("All fields required");
+      return;
     }
+
+    const res = await fetch("http://localhost:5000/api/auth/signup", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+    alert(result.message);
   };
 
   return (
     <div className="container">
       <div className="card">
-        <h2>Signup</h2>
-        <input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-        <input placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        <input
-          placeholder="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <input placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        <button onClick={handleSignup}>Signup</button>
-        <div className="link" onClick={() => navigate("/")}>
-          Already have an account? Login
-        </div>
+        <h2>Create Account 🚀</h2>
+        <p className="subtitle">Join Lost & Found System</p>
+
+        <input name="name" placeholder="Full Name" onChange={handleChange} />
+        <input name="email" placeholder="Email" onChange={handleChange} />
+        <input name="password" type="password" placeholder="Password" onChange={handleChange} />
+        <input name="phone" placeholder="Phone Number" onChange={handleChange} />
+
+        <button onClick={handleSubmit}>Signup</button>
+
+        <p className="switch">
+          Already have an account? <a href="/">Login</a>
+        </p>
       </div>
     </div>
   );

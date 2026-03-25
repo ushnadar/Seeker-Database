@@ -1,29 +1,22 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
-// this is dashboard
 function Dashboard() {
-  const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem("user")) || {};
-
-  const logout = () => {
-    localStorage.removeItem("user");
-    navigate("/");
-  };
-
   return (
-    <div>
-      <div className="navbar">
-        Lost & Found | Welcome {user.name || "User"}
-        <button onClick={logout} style={{ float: "right" }}>
-          Logout
-        </button>
-      </div>
-      <div className="dashboard">
-        <h2>Dashboard</h2>
-        <div className="card-grid">
-          <div className="dashboard-card">Report Lost Item</div>
-          <div className="dashboard-card">Report Found Item</div>
-          <div className="dashboard-card">View Matches</div>
+    <div className="dashboard">
+      <h1>📦 Lost & Found Dashboard</h1>
+
+      <div className="cards">
+        <div className="dash-card">
+          <h3>📤 Report Lost Item</h3>
+          <p>Add details of lost item</p>
+        </div>
+
+        <div className="dash-card">
+          <h3>📥 Found Items</h3>
+          <p>Browse found items</p>
+        </div>
+
+        <div className="dash-card">
+          <h3>📊 My Reports</h3>
+          <p>View your submissions</p>
         </div>
       </div>
     </div>

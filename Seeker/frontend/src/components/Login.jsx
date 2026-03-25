@@ -1,41 +1,44 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 function Login() {
-  const navigate = useNavigate();
+  const [data, setData] = useState({ email: "", password: "" });
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const handleChange = (e) => {
+    setData({ ...data, [e.target.name]: e.target.value });
+  };
 
   const handleLogin = async () => {
-    // SAFELY skip fetch for now to avoid crash
-    if (email && password) {
-      localStorage.setItem("user", JSON.stringify({ name: "Demo User" }));
-      navigate("/dashboard");
+    const res = await fetch("http://localhost:5000/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(data)
+    });
+
+    const result = await res.json();
+
+    if (result.message === "Login successful") {
+      window.location.href = "/dashboard";
     } else {
-      alert("Enter email and password");
+      alert(result.message);
     }
   };
 
   return (
     <div className="container">
       <div className="card">
-        <h2>Login</h2>
-        <input
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          placeholder="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+        <h2>Welcome Back 👋</h2>
+        <p className="subtitle">Login to your account</p>
+
+        <input name="email" placeholder="Email" onChange={handleChange} />
+        <input name="password" type="password" placeholder="Password" onChange={handleChange} />
+
         <button onClick={handleLogin}>Login</button>
-        <div className="link" onClick={() => navigate("/signup")}>
-          Don't have an account? Signup
-        </div>
+
+        <p className="switch">
+          Don't have an account? <a href="/signup">Signup</a>
+        </p>
       </div>
     </div>
   );
