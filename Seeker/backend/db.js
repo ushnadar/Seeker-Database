@@ -3,13 +3,13 @@ const sql = require("mssql");
 const config = {
   user: "sa",
   password: "123456",
-  server: "LENOVO",   // machine name
+  server: "LENOVO",   
   database: "project",
   options: {
     encrypt: false,
     trustServerCertificate: true
   },
-  instanceName: "SQLEXPRESS"  // 🔥 IMPORTANT
+  instanceName: "SQLEXPRESS"  
 };
 
 sql.connect(config)

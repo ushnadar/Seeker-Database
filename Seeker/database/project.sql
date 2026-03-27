@@ -1,237 +1,203 @@
--- Create Database
-CREATE DATABASE IF NOT EXISTS project;
-GO
-USE project;
-GO
+create database if not exists project;
+go
+use project;
+go
 
---------------------------------------
--- Users Table
---------------------------------------
-CREATE TABLE users (
-    user_id     INT PRIMARY KEY IDENTITY(1,1),
-    name        VARCHAR(100)  NOT NULL,
-    email       VARCHAR(100)  UNIQUE NOT NULL,
-    password    VARCHAR(255)  NOT NULL,
-    phone       VARCHAR(20),
-    role        VARCHAR(20)   NOT NULL DEFAULT 'user'
-                              CHECK (role IN ('user', 'admin')),
-    created_at  DATETIME      DEFAULT GETDATE(),
+-- users table
+create table users (
+    user_id     int primary key identity(1,1),
+    name        varchar(100)  not null,
+    email       varchar(100)  unique not null,
+    password    varchar(255)  not null,
+    phone       varchar(20),
+    role        varchar(20)   not null default 'user'
+                              check (role in ('user', 'admin')),
+    created_at  datetime      default getdate(),
 
-    -- password stored as bcrypt hash (always 60 chars), raw must be >= 6
-    CONSTRAINT chk_email_format
-        CHECK (email LIKE '%_@__%.__%'),
+    constraint chk_email_format
+        check (email like '%_@__%.__%'),
 
-    CONSTRAINT chk_name_not_empty
-        CHECK (LEN(LTRIM(RTRIM(name))) > 0)
+    constraint chk_name_not_empty
+        check (len(ltrim(rtrim(name))) > 0)
 );
 
---------------------------------------
--- Categories Table
---------------------------------------
-CREATE TABLE categories (
-    category_id   INT PRIMARY KEY IDENTITY(1,1),
-    category_name VARCHAR(100) UNIQUE NOT NULL
+-- categories table
+create table categories (
+    category_id   int primary key identity(1,1),
+    category_name varchar(100) unique not null
 );
 
---------------------------------------
--- Locations Table
---------------------------------------
-CREATE TABLE locations (
-    location_id   INT PRIMARY KEY IDENTITY(1,1),
-    location_name VARCHAR(150) NOT NULL
+-- locations table
+create table locations (
+    location_id   int primary key identity(1,1),
+    location_name varchar(150) not null
 );
 
---------------------------------------
--- Items Table
---------------------------------------
-CREATE TABLE items (
-    item_id     INT PRIMARY KEY IDENTITY(1,1),
-    user_id     INT,
-    category_id INT,
-    location_id INT,
-    item_name   VARCHAR(150) NOT NULL,
-    description TEXT,
-    item_type   VARCHAR(10)  CHECK (item_type IN ('lost', 'found')),
-    priority    VARCHAR(10)  CHECK (priority  IN ('low', 'medium', 'high')),
-    status      VARCHAR(20)  DEFAULT 'pending'
-                             CHECK (status IN ('pending', 'approved', 'rejected', 'resolved')),
-    image_url   VARCHAR(255),
-    report_date DATE,
-    created_at  DATETIME     DEFAULT GETDATE(),
 
-    FOREIGN KEY (user_id)     REFERENCES users(user_id)      ON DELETE SET NULL,
-    FOREIGN KEY (category_id) REFERENCES categories(category_id),
-    FOREIGN KEY (location_id) REFERENCES locations(location_id)
+-- items table
+create table items (
+    item_id     int primary key identity(1,1),
+    user_id     int,
+    category_id int,
+    location_id int,
+    item_name   varchar(150) not null,
+    description text,
+    item_type   varchar(10)  check (item_type in ('lost', 'found')),
+    priority    varchar(10)  check (priority  in ('low', 'medium', 'high')),
+    status      varchar(20)  default 'pending'
+                             check (status in ('pending', 'approved', 'rejected', 'resolved')),
+    image_url   varchar(255),
+    report_date date,
+    created_at  datetime     default getdate(),
+
+    foreign key (user_id)     references users(user_id)      on delete set null,
+    foreign key (category_id) references categories(category_id),
+    foreign key (location_id) references locations(location_id)
 );
 
---------------------------------------
--- Claims Table
---------------------------------------
-CREATE TABLE claims (
-    claim_id          INT PRIMARY KEY IDENTITY(1,1),
-    item_id           INT,
-    claimant_id       INT,
-    proof_description TEXT,
-    proof_image       VARCHAR(255),
-    claim_status      VARCHAR(20) DEFAULT 'pending'
-                                  CHECK (claim_status IN ('pending', 'approved', 'rejected')),
-    claim_date        DATETIME    DEFAULT GETDATE(),
 
-    FOREIGN KEY (item_id)     REFERENCES items(item_id)  ON DELETE CASCADE,
-    FOREIGN KEY (claimant_id) REFERENCES users(user_id)  ON DELETE NO ACTION
+-- claims table
+create table claims (
+    claim_id          int primary key identity(1,1),
+    item_id           int,
+    claimant_id       int,
+    proof_description text,
+    proof_image       varchar(255),
+    claim_status      varchar(20) default 'pending'
+                                  check (claim_status in ('pending', 'approved', 'rejected')),
+    claim_date        datetime    default getdate(),
+
+    foreign key (item_id)     references items(item_id)  on delete cascade,
+    foreign key (claimant_id) references users(user_id)  on delete no action
 );
 
---------------------------------------
--- ItemMatches Table
---------------------------------------
-CREATE TABLE itemmatches (
-    match_id      INT PRIMARY KEY IDENTITY(1,1),
-    lost_item_id  INT,
-    found_item_id INT,
-    match_score   DECIMAL(5,2) CHECK (match_score BETWEEN 0 AND 100),
-    match_date    DATETIME DEFAULT GETDATE(),
 
-    FOREIGN KEY (lost_item_id)  REFERENCES items(item_id),
-    FOREIGN KEY (found_item_id) REFERENCES items(item_id)
+-- itemmatches table
+create table itemmatches (
+    match_id      int primary key identity(1,1),
+    lost_item_id  int,
+    found_item_id int,
+    match_score   decimal(5,2) check (match_score between 0 and 100),
+    match_date    datetime default getdate(),
+
+    foreign key (lost_item_id)  references items(item_id),
+    foreign key (found_item_id) references items(item_id)
 );
 
---------------------------------------
--- Notifications Table
---------------------------------------
-CREATE TABLE notifications (
-    notification_id INT PRIMARY KEY IDENTITY(1,1),
-    user_id         INT,
-    message         TEXT         NOT NULL,
-    is_read         BIT          DEFAULT 0,
-    created_at      DATETIME     DEFAULT GETDATE(),
+-- notifications table
+create table notifications (
+    notification_id int primary key identity(1,1),
+    user_id         int,
+    message         text         not null,
+    is_read         bit          default 0,
+    created_at      datetime     default getdate(),
 
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    foreign key (user_id) references users(user_id) on delete cascade
 );
 
---------------------------------------
--- AuditLogs Table
---------------------------------------
-CREATE TABLE auditlogs (
-    log_id      INT PRIMARY KEY IDENTITY(1,1),
-    admin_id    INT,
-    action      VARCHAR(255) NOT NULL,
-    action_time DATETIME     DEFAULT GETDATE(),
 
-    FOREIGN KEY (admin_id) REFERENCES users(user_id) ON DELETE SET NULL
+-- auditlogs table
+create table auditlogs (
+    log_id      int primary key identity(1,1),
+    admin_id    int,
+    action      varchar(255) not null,
+    action_time datetime     default getdate(),
+
+    foreign key (admin_id) references users(user_id) on delete set null
 );
 
---------------------------------------
--- DuplicateReports Table
---------------------------------------
-CREATE TABLE duplicatereports (
-    duplicate_id  INT PRIMARY KEY IDENTITY(1,1),
-    item1_id      INT,
-    item2_id      INT,
-    detected_date DATETIME DEFAULT GETDATE(),
+-- duplicatereports table
+create table duplicatereports (
+    duplicate_id  int primary key identity(1,1),
+    item1_id      int,
+    item2_id      int,
+    detected_date datetime default getdate(),
 
-    FOREIGN KEY (item1_id) REFERENCES items(item_id),
-    FOREIGN KEY (item2_id) REFERENCES items(item_id),
+    foreign key (item1_id) references items(item_id),
+    foreign key (item2_id) references items(item_id),
 
-    CONSTRAINT chk_no_self_duplicate CHECK (item1_id <> item2_id)
+    constraint chk_no_self_duplicate check (item1_id <> item2_id)
 );
-GO
+go
 
---------------------------------------
--- Stored Procedure: Signup
--- Validates: duplicate email per role,
---            required fields, role value
---------------------------------------
-CREATE PROCEDURE sp_signup
-    @name     VARCHAR(100),
-    @email    VARCHAR(100),
-    @password VARCHAR(255),
-    @phone    VARCHAR(20) = NULL,
-    @role     VARCHAR(20) = 'user'
-AS
-BEGIN
-    SET NOCOUNT ON;
 
-    -- Validate role
-    IF @role NOT IN ('user', 'admin')
-    BEGIN
-        RAISERROR('Invalid role. Must be user or admin.', 16, 1);
-        RETURN;
-    END
+-- stored procedure: signup
+create procedure sp_signup
+    @name     varchar(100),
+    @email    varchar(100),
+    @password varchar(255),
+    @phone    varchar(20) = null,
+    @role     varchar(20) = 'user'
+as
+begin
+    set nocount on;
 
-    -- Required fields
-    IF LEN(LTRIM(RTRIM(@name))) = 0 OR LEN(LTRIM(RTRIM(@email))) = 0 OR LEN(LTRIM(RTRIM(@password))) = 0
-    BEGIN
-        RAISERROR('Name, email and password are required.', 16, 1);
-        RETURN;
-    END
+    if @role not in ('user', 'admin')
+    begin
+        raiserror('invalid role. must be user or admin.', 16, 1);
+        return;
+    end
 
-    -- Email format basic check
-    IF @email NOT LIKE '%_@__%.__%'
-    BEGIN
-        RAISERROR('Invalid email format.', 16, 1);
-        RETURN;
-    END
+    if len(ltrim(rtrim(@name))) = 0 or len(ltrim(rtrim(@email))) = 0 or len(ltrim(rtrim(@password))) = 0
+    begin
+        raiserror('name, email and password are required.', 16, 1);
+        return;
+    end
 
-    -- Duplicate email check per role
-    -- Same email CAN exist for different roles (user vs admin)
-    IF EXISTS (SELECT 1 FROM users WHERE email = @email AND role = @role)
-    BEGIN
-        RAISERROR('Email already registered for this role.', 16, 1);
-        RETURN;
-    END
+    if @email not like '%_@__%.__%'
+    begin
+        raiserror('invalid email format.', 16, 1);
+        return;
+    end
 
-    -- Password length check (raw password before hashing must be >= 6)
-    IF LEN(@password) < 6
-    BEGIN
-        RAISERROR('Password must be at least 6 characters.', 16, 1);
-        RETURN;
-    END
+    if exists (select 1 from users where email = @email and role = @role)
+    begin
+        raiserror('email already registered for this role.', 16, 1);
+        return;
+    end
 
-    -- Insert user
-    INSERT INTO users (name, email, password, phone, role)
-    VALUES (
-        LTRIM(RTRIM(@name)),
-        LOWER(LTRIM(RTRIM(@email))),
-        @password,   -- bcrypt hash passed from backend
+    if len(@password) < 6
+    begin
+        raiserror('password must be at least 6 characters.', 16, 1);
+        return;
+    end
+
+    insert into users (name, email, password, phone, role)
+    values (
+        ltrim(rtrim(@name)),
+        lower(ltrim(rtrim(@email))),
+        @password,
         @phone,
         @role
     );
 
-    SELECT SCOPE_IDENTITY() AS new_user_id;
-END
-GO
+    select scope_identity() as new_user_id;
+end
+go
 
---------------------------------------
--- Stored Procedure: Login
--- Validates: email + role match exists
--- Password comparison done in backend (bcrypt)
---------------------------------------
-CREATE PROCEDURE sp_login
-    @email VARCHAR(100),
-    @role  VARCHAR(20)
-AS
-BEGIN
-    SET NOCOUNT ON;
+-- stored procedure: login
+create procedure sp_login
+    @email varchar(100),
+    @role  varchar(20)
+as
+begin
+    set nocount on;
 
-    -- Required fields
-    IF LEN(LTRIM(RTRIM(@email))) = 0 OR LEN(LTRIM(RTRIM(@role))) = 0
-    BEGIN
-        RAISERROR('Email and role are required.', 16, 1);
-        RETURN;
-    END
+    if len(ltrim(rtrim(@email))) = 0 or len(ltrim(rtrim(@role))) = 0
+    begin
+        raiserror('email and role are required.', 16, 1);
+        return;
+    end
 
-    -- Validate role value
-    IF @role NOT IN ('user', 'admin')
-    BEGIN
-        RAISERROR('Invalid role.', 16, 1);
-        RETURN;
-    END
+    if @role not in ('user', 'admin')
+    begin
+        raiserror('invalid role.', 16, 1);
+        return;
+    end
 
-    -- Return user record matching email AND role
-    -- If no row returned → no account for this role
-    SELECT user_id, name, email, password, role
-    FROM users
-    WHERE email = LOWER(LTRIM(RTRIM(@email)))
-      AND role  = @role;
-END
-GO
+    select user_id, name, email, password, role
+    from users
+    where email = lower(ltrim(rtrim(@email)))
+      and role  = @role;
+end
+go

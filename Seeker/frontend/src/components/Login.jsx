@@ -36,7 +36,7 @@ function Login() {
       const res = await fetch("http://localhost:5000/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data), // sends email, password, role
+        body: JSON.stringify(data), 
       });
 
       const result = await res.json();
@@ -44,7 +44,7 @@ function Login() {
       if (result.message === "Login successful") {
         localStorage.setItem("user", JSON.stringify(result.user));
 
-        // Redirect based on role
+        // login based on role
         if (result.user.role === "admin") {
           window.location.href = "/admin-dashboard";
         } else {
@@ -61,7 +61,7 @@ function Login() {
   return (
     <div className="container">
       <div className="card">
-        <h2>Login 👋</h2>
+        <h2>Login </h2>
 
         <select name="role" onChange={handleChange}>
           <option value="user">User Login</option>

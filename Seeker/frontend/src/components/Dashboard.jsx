@@ -6,7 +6,7 @@ function Dashboard({ role }) {
       <h1>📦 Lost & Found Dashboard</h1>
 
       <div className="cards">
-        {/* Common for both users and admin */}
+        {}
         {role === "user" && (
           <>
             <div className="dash-card">
