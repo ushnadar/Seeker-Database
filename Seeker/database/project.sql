@@ -1,173 +1,237 @@
-create database project
+-- Create Database
+CREATE DATABASE IF NOT EXISTS project;
 GO
-use project
+USE project;
 GO
-                             ---Creating Tables---
---user table
-create table users (
-user_id int primary key identity(1,1),
-name varchar(100) not null,
-email varchar(100) unique not null,
-password varchar(255) not null,
-phone varchar(20),
-role varchar(20) default 'user',
-created_at datetime default getdate()
+
+--------------------------------------
+-- Users Table
+--------------------------------------
+CREATE TABLE users (
+    user_id     INT PRIMARY KEY IDENTITY(1,1),
+    name        VARCHAR(100)  NOT NULL,
+    email       VARCHAR(100)  UNIQUE NOT NULL,
+    password    VARCHAR(255)  NOT NULL,
+    phone       VARCHAR(20),
+    role        VARCHAR(20)   NOT NULL DEFAULT 'user'
+                              CHECK (role IN ('user', 'admin')),
+    created_at  DATETIME      DEFAULT GETDATE(),
+
+    -- password stored as bcrypt hash (always 60 chars), raw must be >= 6
+    CONSTRAINT chk_email_format
+        CHECK (email LIKE '%_@__%.__%'),
+
+    CONSTRAINT chk_name_not_empty
+        CHECK (LEN(LTRIM(RTRIM(name))) > 0)
 );
 
---categories table
-create table categories (
-category_id int primary key identity(1,1),
-category_name varchar(100) unique not null
+--------------------------------------
+-- Categories Table
+--------------------------------------
+CREATE TABLE categories (
+    category_id   INT PRIMARY KEY IDENTITY(1,1),
+    category_name VARCHAR(100) UNIQUE NOT NULL
 );
 
-
---locations Table
-create table locations (
-location_id int primary key identity(1,1),
-location_name varchar(150) not null
+--------------------------------------
+-- Locations Table
+--------------------------------------
+CREATE TABLE locations (
+    location_id   INT PRIMARY KEY IDENTITY(1,1),
+    location_name VARCHAR(150) NOT NULL
 );
 
+--------------------------------------
+-- Items Table
+--------------------------------------
+CREATE TABLE items (
+    item_id     INT PRIMARY KEY IDENTITY(1,1),
+    user_id     INT,
+    category_id INT,
+    location_id INT,
+    item_name   VARCHAR(150) NOT NULL,
+    description TEXT,
+    item_type   VARCHAR(10)  CHECK (item_type IN ('lost', 'found')),
+    priority    VARCHAR(10)  CHECK (priority  IN ('low', 'medium', 'high')),
+    status      VARCHAR(20)  DEFAULT 'pending'
+                             CHECK (status IN ('pending', 'approved', 'rejected', 'resolved')),
+    image_url   VARCHAR(255),
+    report_date DATE,
+    created_at  DATETIME     DEFAULT GETDATE(),
 
---items table
-create table items (
-item_id int primary key identity(1,1),
-user_id int,category_id int,location_id int,
-item_name varchar(150) not null,description text,
-item_type varchar(10),priority varchar(10),
-status varchar(20) default 'pending',
-image_url varchar(255),report_date date,
-created_at datetime default getdate(),
-
-foreign key (user_id) references users(user_id),
-foreign key (category_id) references categories(category_id),
-foreign key (location_id) references locations(location_id)
+    FOREIGN KEY (user_id)     REFERENCES users(user_id)      ON DELETE SET NULL,
+    FOREIGN KEY (category_id) REFERENCES categories(category_id),
+    FOREIGN KEY (location_id) REFERENCES locations(location_id)
 );
 
---claims table
-create table claims (
-claim_id int primary key identity(1,1),item_id int,
-claimant_id int,proof_description text, proof_image varchar(255),
-claim_status varchar(20) default 'pending',claim_date datetime default getdate(),
+--------------------------------------
+-- Claims Table
+--------------------------------------
+CREATE TABLE claims (
+    claim_id          INT PRIMARY KEY IDENTITY(1,1),
+    item_id           INT,
+    claimant_id       INT,
+    proof_description TEXT,
+    proof_image       VARCHAR(255),
+    claim_status      VARCHAR(20) DEFAULT 'pending'
+                                  CHECK (claim_status IN ('pending', 'approved', 'rejected')),
+    claim_date        DATETIME    DEFAULT GETDATE(),
 
-foreign key (item_id) references items(item_id),
-foreign key (claimant_id) references users(user_id)
+    FOREIGN KEY (item_id)     REFERENCES items(item_id)  ON DELETE CASCADE,
+    FOREIGN KEY (claimant_id) REFERENCES users(user_id)  ON DELETE NO ACTION
 );
 
+--------------------------------------
+-- ItemMatches Table
+--------------------------------------
+CREATE TABLE itemmatches (
+    match_id      INT PRIMARY KEY IDENTITY(1,1),
+    lost_item_id  INT,
+    found_item_id INT,
+    match_score   DECIMAL(5,2) CHECK (match_score BETWEEN 0 AND 100),
+    match_date    DATETIME DEFAULT GETDATE(),
 
---matcheditem table
-create table itemmatches (
-match_id int primary key identity(1,1),lost_item_id int,found_item_id int,
-match_score decimal(5,2),match_date datetime default getdate(),
-
-foreign key (lost_item_id) references items(item_id),
-foreign key (found_item_id) references items(item_id)
+    FOREIGN KEY (lost_item_id)  REFERENCES items(item_id),
+    FOREIGN KEY (found_item_id) REFERENCES items(item_id)
 );
 
---notifications table
-create table notifications (
-notification_id int primary key identity(1,1),
-user_id int,message text,
-is_read bit default 0,
-created_at datetime default getdate(),
+--------------------------------------
+-- Notifications Table
+--------------------------------------
+CREATE TABLE notifications (
+    notification_id INT PRIMARY KEY IDENTITY(1,1),
+    user_id         INT,
+    message         TEXT         NOT NULL,
+    is_read         BIT          DEFAULT 0,
+    created_at      DATETIME     DEFAULT GETDATE(),
 
-foreign key (user_id) references users(user_id)
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
---auditlogs table
-create table auditlogs (
-log_id int primary key identity(1,1),
-admin_id int,action varchar(255),
-action_time datetime default getdate(),
+--------------------------------------
+-- AuditLogs Table
+--------------------------------------
+CREATE TABLE auditlogs (
+    log_id      INT PRIMARY KEY IDENTITY(1,1),
+    admin_id    INT,
+    action      VARCHAR(255) NOT NULL,
+    action_time DATETIME     DEFAULT GETDATE(),
 
-foreign key (admin_id) references users(user_id)
+    FOREIGN KEY (admin_id) REFERENCES users(user_id) ON DELETE SET NULL
 );
 
+--------------------------------------
+-- DuplicateReports Table
+--------------------------------------
+CREATE TABLE duplicatereports (
+    duplicate_id  INT PRIMARY KEY IDENTITY(1,1),
+    item1_id      INT,
+    item2_id      INT,
+    detected_date DATETIME DEFAULT GETDATE(),
 
---duplicatereports table
-create table duplicatereports (
-duplicate_id int primary key identity(1,1),item1_id int,item2_id int,
-detected_date datetime default getdate(),
+    FOREIGN KEY (item1_id) REFERENCES items(item_id),
+    FOREIGN KEY (item2_id) REFERENCES items(item_id),
 
-foreign key (item1_id) references items(item_id),
-foreign key (item2_id) references items(item_id)
+    CONSTRAINT chk_no_self_duplicate CHECK (item1_id <> item2_id)
 );
+GO
 
-                                     ---Inserting data---
---Users
-insert into users (name, email, password, phone, role) values
-('Ushna Dar', 'ushna@gmail.com', 'pass123', '03001234567', 'user'),
-('Sara Ahmed', 'sara@gmail.com', 'pass456', '03111234567', 'user'),
-('Admin User', 'admin@gmail.com', 'admin123', '03221234567', 'admin'),
-('Ahmed Ali', 'ahmed@gmail.com', 'pass789', '03331234567', 'user'),
-('Fatima Noor', 'fatima@gmail.com', 'pass321', '03441234567', 'user'),
-('Hassan Raza', 'hassan@gmail.com', 'pass654', '03011223344', 'user'),
-('Ayesha Malik', 'ayesha@gmail.com', 'pass987', '03122334455', 'user'),
-('Bilal Shah', 'bilal@gmail.com', 'pass741', '03233445566', 'user'),
-('Zain Abbas', 'zain@gmail.com', 'pass852', '03344556677', 'user'),
-('Maria Khalid', 'maria@gmail.com', 'pass963', '03455667788', 'user');
+--------------------------------------
+-- Stored Procedure: Signup
+-- Validates: duplicate email per role,
+--            required fields, role value
+--------------------------------------
+CREATE PROCEDURE sp_signup
+    @name     VARCHAR(100),
+    @email    VARCHAR(100),
+    @password VARCHAR(255),
+    @phone    VARCHAR(20) = NULL,
+    @role     VARCHAR(20) = 'user'
+AS
+BEGIN
+    SET NOCOUNT ON;
 
---Categories
-insert into categories (category_name) values
-('electronics'),
-('documents'),
-('bags'),
-('accessories'),
-('medical items');
+    -- Validate role
+    IF @role NOT IN ('user', 'admin')
+    BEGIN
+        RAISERROR('Invalid role. Must be user or admin.', 16, 1);
+        RETURN;
+    END
 
+    -- Required fields
+    IF LEN(LTRIM(RTRIM(@name))) = 0 OR LEN(LTRIM(RTRIM(@email))) = 0 OR LEN(LTRIM(RTRIM(@password))) = 0
+    BEGIN
+        RAISERROR('Name, email and password are required.', 16, 1);
+        RETURN;
+    END
 
---locations
-insert into locations (location_name) values
-('library'),
-('cafeteria'),
-('parking area'),
-('lecture hall a'),
-('main gate');
+    -- Email format basic check
+    IF @email NOT LIKE '%_@__%.__%'
+    BEGIN
+        RAISERROR('Invalid email format.', 16, 1);
+        RETURN;
+    END
 
---items
-insert into items (user_id, category_id, location_id, item_name, description, item_type, priority, status, report_date) values
-(1, 1, 1, 'iPhone 12', 'Black iPhone lost in library', 'lost', 'high', 'lost', '2026-03-01'),
-(2, 2, 2, 'Student ID Card', 'ID card found near cafeteria', 'found', 'high', 'found', '2026-03-02'),
-(3, 3, 3, 'Blue Backpack', 'Bag lost in parking area', 'lost', 'medium', 'lost', '2026-03-03'),
-(4, 4, 5, 'Car Keys', 'Set of keys found near main gate', 'found', 'medium', 'found', '2026-03-04'),
-(5, 1, 1, 'Samsung Earbuds', 'White earbuds lost in library', 'lost', 'medium', 'lost', '2026-03-05'),
-(6, 5, 3, 'Medical Inhaler', 'Asthma inhaler lost in parking area', 'lost', 'high', 'lost', '2026-03-05'),
-(7, 3, 1, 'Black Wallet', 'Wallet found in library', 'found', 'high', 'found', '2026-03-06'),
-(8, 3, 4, 'Notebook', 'Math notebook lost in lecture hall A', 'lost', 'low', 'lost', '2026-03-06'),
-(9, 2, 2, 'Passport Copy', 'Document found in cafeteria', 'found', 'high', 'found', '2026-03-07'),
-(10, 4, 3, 'Bike Helmet', 'Helmet lost in parking area', 'lost', 'medium', 'lost', '2026-03-07');
+    -- Duplicate email check per role
+    -- Same email CAN exist for different roles (user vs admin)
+    IF EXISTS (SELECT 1 FROM users WHERE email = @email AND role = @role)
+    BEGIN
+        RAISERROR('Email already registered for this role.', 16, 1);
+        RETURN;
+    END
 
+    -- Password length check (raw password before hashing must be >= 6)
+    IF LEN(@password) < 6
+    BEGIN
+        RAISERROR('Password must be at least 6 characters.', 16, 1);
+        RETURN;
+    END
 
---claims
-insert into claims (item_id, claimant_id, proof_description, claim_status) values
-(2, 1, 'This ID card belongs to me and has my name on it', 'pending'),
-(4, 5, 'These keys are mine, with serial number XYZ', 'pending'),
-(7, 6, 'Wallet contains my ID and cash', 'approved'),
-(9, 2, 'Document is mine, verified by passport copy', 'pending');
+    -- Insert user
+    INSERT INTO users (name, email, password, phone, role)
+    VALUES (
+        LTRIM(RTRIM(@name)),
+        LOWER(LTRIM(RTRIM(@email))),
+        @password,   -- bcrypt hash passed from backend
+        @phone,
+        @role
+    );
 
+    SELECT SCOPE_IDENTITY() AS new_user_id;
+END
+GO
 
---itemmatches
-insert into itemmatches (lost_item_id, found_item_id, match_score) values
-(1, 2, 75.50),
-(3, 7, 80.00),
-(5, 4, 60.00);
+--------------------------------------
+-- Stored Procedure: Login
+-- Validates: email + role match exists
+-- Password comparison done in backend (bcrypt)
+--------------------------------------
+CREATE PROCEDURE sp_login
+    @email VARCHAR(100),
+    @role  VARCHAR(20)
+AS
+BEGIN
+    SET NOCOUNT ON;
 
+    -- Required fields
+    IF LEN(LTRIM(RTRIM(@email))) = 0 OR LEN(LTRIM(RTRIM(@role))) = 0
+    BEGIN
+        RAISERROR('Email and role are required.', 16, 1);
+        RETURN;
+    END
 
---notifications
-insert into notifications (user_id, message, is_read) values
-(1, 'A possible match has been found for your lost item', 0),
-(2, 'Your claim request is under review', 0),
-(3, 'Admin approved a claim request', 1),
-(5, 'Your found item claim is pending approval', 0),
-(6, 'Your lost item has a potential match', 0);
+    -- Validate role value
+    IF @role NOT IN ('user', 'admin')
+    BEGIN
+        RAISERROR('Invalid role.', 16, 1);
+        RETURN;
+    END
 
---auditlogs
-insert into auditlogs (admin_id, action) values
-(3, 'Approved claim request for wallet'),
-(3, 'Updated item status to returned'),
-(3, 'Deleted duplicate report entry');
-
---duplicatereports
-insert into duplicatereports (item1_id, item2_id) values
-(1, 5),
-(3, 8);
-
+    -- Return user record matching email AND role
+    -- If no row returned → no account for this role
+    SELECT user_id, name, email, password, role
+    FROM users
+    WHERE email = LOWER(LTRIM(RTRIM(@email)))
+      AND role  = @role;
+END
+GO
